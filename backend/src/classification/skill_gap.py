@@ -111,12 +111,16 @@ class SkillGapAnalyzer:
         'ci/cd': 'cicd', 'ci-cd': 'cicd',
         'continuous integration': 'cicd', 'continuous deployment': 'cicd',
         
-        # Role synonyms
+        # Role synonyms - ENHANCED
         'fullstack': 'full stack', 'full-stack': 'full stack',
         'frontend': 'front end', 'front-end': 'front end',
         'backend': 'back end', 'back-end': 'back end',
         'devops': 'devops engineer', 'devsecops': 'devops engineer',
         'real-estate': 'real estate', 'realestate': 'real estate', 'realstate': 'real estate',
+        # Web development synonyms
+        'webdev': 'web development', 'web-dev': 'web development',
+        'webdevelopment': 'web development', 'web-development': 'web development',
+        'webdeveloper': 'web developer', 'web-developer': 'web developer',
         
         # ML/AI synonyms
         'ml': 'machine learning', 'dl': 'deep learning',
@@ -126,6 +130,7 @@ class SkillGapAnalyzer:
         # Other synonyms
         'rest api': 'rest', 'restful api': 'rest', 'web api': 'api',
         'problem-solving': 'problem solving', 'team-work': 'teamwork',
+        'cpp': 'c++',
     }
     
     def __init__(self, fuzzy_threshold: float = 0.85):
@@ -174,10 +179,72 @@ class SkillGapAnalyzer:
         
         print(f"Skills dataset not found, using built-in patterns ({len(self.skill_patterns)} skills)")
     
+    # Words that can be skills OR section headers - need context checking
+    AMBIGUOUS_SKILLS = {
+        'education', 'requirements', 'recruitment', 'testing', 'experience',
+        'skills', 'qualifications', 'responsibilities', 'about', 'overview',
+        'summary', 'interests', 'projects', 'certifications', 'achievements',
+        'references', 'objective', 'profile', 'contact', 'personal',
+        'employment', 'history', 'background', 'training', 'activities',
+        'hobbies', 'languages', 'awards', 'publications', 'volunteer'
+    }
+    
     def _normalize_skill(self, skill: str) -> str:
         """Normalize skill using synonym mapping."""
         skill_lower = skill.lower().strip()
         return self.synonyms.get(skill_lower, skill_lower)
+    
+    def _is_section_header(self, skill: str, text: str) -> bool:
+        """
+        Check if a skill word is being used as a section header (not an actual skill).
+        Uses context patterns to determine if it's a header vs skill mention.
+        
+        Returns True if word appears to be a section header, False if it's a skill.
+        """
+        skill_lower = skill.lower()
+        
+        # Only check ambiguous words
+        if skill_lower not in self.AMBIGUOUS_SKILLS:
+            return False
+        
+        text_lower = text.lower()
+        
+        # Patterns that indicate section headers
+        section_patterns = [
+            # Word followed by colon at start of line
+            r'(?:^|\n)\s*' + re.escape(skill_lower) + r'\s*:',
+            # Word followed by colon anywhere  
+            r'\b' + re.escape(skill_lower) + r'\s*:\s*\n',
+            # ALL CAPS version (like "EDUCATION")
+            r'(?:^|\n)\s*' + re.escape(skill.upper()) + r'\s*(?:\n|$|:)',
+            # Word alone on a line (section header)
+            r'(?:^|\n)\s*' + re.escape(skill_lower) + r'\s*(?:\n|$)',
+            # Word followed by section-like words
+            r'\b' + re.escape(skill_lower) + r'\s+(?:section|details|information)\b',
+        ]
+        
+        # Patterns that indicate actual skill usage
+        skill_patterns = [
+            # "experience in/with X"
+            r'(?:experience|proficient|skilled|expertise|familiar|knowledge|worked)\s+(?:in|with|on)\s+' + re.escape(skill_lower),
+            # "X experience/skills"
+            r'\b' + re.escape(skill_lower) + r'\s+(?:experience|skills|knowledge|proficiency|background)',
+            # Listed with other skills (comma or bullet context)
+            r'(?:,\s*|\|\s*|•\s*)' + re.escape(skill_lower) + r'(?:\s*,|\s*\||\s*•|\s*$)',
+            # After skill-introducing phrases
+            r'(?:required|preferred|must have|nice to have|looking for|need|seeking).*' + re.escape(skill_lower),
+        ]
+        
+        # Check if it matches section header patterns
+        for pattern in section_patterns:
+            if re.search(pattern, text_lower, re.IGNORECASE | re.MULTILINE):
+                # But also check if there are skill-context mentions
+                for skill_pattern in skill_patterns:
+                    if re.search(skill_pattern, text_lower, re.IGNORECASE):
+                        return False  # Has skill context, keep it
+                return True  # Looks like a section header
+        
+        return False  # Default: treat as a skill
     
     def _fuzzy_match(self, word: str, skills: Set[str]) -> str:
         """
@@ -297,7 +364,14 @@ class SkillGapAnalyzer:
             if abbr_lower in self.skill_patterns:
                 found_skills.add(self._normalize_skill(abbr_lower))
         
-        return found_skills
+        # 5. Context-aware filtering: Remove skills that appear as section headers
+        # This prevents "Education" (section header) from being treated as a skill
+        filtered_skills = set()
+        for skill in found_skills:
+            if not self._is_section_header(skill, text):
+                filtered_skills.add(skill)
+        
+        return filtered_skills
     
     def analyze_gap(self, job_text: str, resume_text: str,
                     job_skills: List[str] = None, 

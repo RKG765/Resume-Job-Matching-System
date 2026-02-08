@@ -1,24 +1,44 @@
-# Resume-Job Description Matching System
-# Core dependencies
+# Resume-Job Description Matching System v2.0
+# Production-ready with FastAPI, PostgreSQL, and BERT
 
-# Web Framework
-flask==3.0.0
-flask-cors==4.0.0
-gunicorn==21.2.0
+# ============ Web Framework ============
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
 
-# NLP & Text Processing
+# ============ Database ============
+sqlalchemy==2.0.25
+asyncpg==0.29.0          # PostgreSQL async driver
+pgvector==0.2.4          # Vector similarity search
+aiosqlite==0.19.0        # SQLite async (fallback)
+greenlet==3.0.3          # Required for SQLAlchemy async
+
+# ============ Embeddings (BERT) ============
+sentence-transformers==2.2.2
+torch==2.1.2
+transformers==4.36.2
+
+# ============ NLP & Text Processing ============
 nltk==3.8.1
 scikit-learn==1.4.0
 
-# Data Handling
-pandas==2.1.4
+# ============ Data Handling ============
 numpy==1.26.3
 
-# PDF Processing (for resume uploads)
+# ============ File Processing ============
 PyPDF2==3.0.1
+pdfplumber==0.10.3
+python-docx==1.1.0
 
-# Testing
-pytest==7.4.4
-
-# Production
+# ============ Configuration ============
 python-dotenv==1.0.0
+pydantic-settings==2.1.0
+pydantic==2.5.3
+
+# ============ Testing ============
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0
+
+# ============ Production ============
+gunicorn==21.2.0

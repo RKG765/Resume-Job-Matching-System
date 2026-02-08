@@ -1,4 +1,4 @@
-# API module
-from api.app import create_app
+# API module - FastAPI routes
+from api.routes import router
 
-__all__ = ['create_app']
+__all__ = ["router"]
