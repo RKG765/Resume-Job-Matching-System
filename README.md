@@ -41,30 +41,6 @@ npm run dev
 # Open http://localhost:5173
 ```
 
-## 📁 Project Structure
-
-```
-resume_job_matcher/
-├── backend/
-│   ├── src/
-│   │   ├── api/           # FastAPI routes
-│   │   ├── core/          # Config, database
-│   │   ├── models/        # SQLAlchemy models
-│   │   ├── services/      # Embedding, matching, LLM
-│   │   ├── classification/ # Skill gap analyzer
-│   │   └── main.py        # Entry point
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── App.jsx        # Main app
-│   │   └── App.css        # Ceramic theme
-│   └── package.json
-├── docker-compose.yml
-└── README.md
-```
-
 ## 🎨 UI Theme: Ceramic Light
 
 - **Background**: Warm off-white (`#faf9f7`)
@@ -115,7 +91,6 @@ LLM_MODEL=deepseek-r1
 
 ## 📚 Documentation
 
-- [Problem Statement](PROBLEM.md)
 - [Presentation](present.md)
 - [LLM Setup Guide](docs/llm_setup.md)
 
