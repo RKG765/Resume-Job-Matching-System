@@ -1,4 +1,4 @@
-# Resume-Job Matching System - Backend Dockerfile
+# Resume-Job Matching System - Backend Dockerfile (Cloud-Ready)
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download NLTK data
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
+# Pre-download the BERT model at build time (avoids download at runtime)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 # Copy source code
 COPY . .
@@ -22,8 +22,11 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH=/app/src
 
-# Expose port
-EXPOSE 8000
+# Cloud platforms inject PORT env var (default 8000)
+ENV PORT=8000
 
-# Run with uvicorn
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose port
+EXPOSE ${PORT}
+
+# Run with uvicorn - uses $PORT from environment
+CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT

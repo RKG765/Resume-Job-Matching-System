@@ -1,14 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Upload, FileText, Sparkles, Settings, Check, AlertCircle, Trash2, RefreshCw, Edit3, Eye, EyeOff } from 'lucide-react'
+import { Upload, FileText, Sparkles, Settings, Check, AlertCircle, Trash2, RefreshCw, Eye, EyeOff, Sun, Moon } from 'lucide-react'
 import PipelineVisualizer from './components/PipelineVisualizer'
 import MatchDashboard from './components/MatchDashboard'
-import LiveResumeEditor from './components/LiveResumeEditor'
 import './App.css'
 
-const API_BASE_URL = ''
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 function App() {
+  // Theme state
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('rm-theme')
+    if (saved) return saved
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('rm-theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+
   // State
   const [jobDescription, setJobDescription] = useState('')
   const [jdSkills, setJdSkills] = useState([])
@@ -24,7 +37,7 @@ function App() {
 
   // UI state
   const [showHowItWorks, setShowHowItWorks] = useState(false)
-  const [expandedFileIndex, setExpandedFileIndex] = useState(null) // For extracted text preview
+  const [expandedFileIndex, setExpandedFileIndex] = useState(null)
 
   // Check backend connection
   useEffect(() => {
@@ -82,12 +95,10 @@ function App() {
         })
         const data = await response.json()
 
-        // Check if we got valid extracted text (not binary data)
         let content = data.text || ''
         let extractionSuccess = data.success && content.length > 0 && !content.includes('%PDF')
 
         if (!extractionSuccess) {
-          // Try text extraction endpoint
           const textResponse = await fetch(`${API_BASE_URL}/api/extract-text`, {
             method: 'POST',
             body: formData
@@ -107,7 +118,6 @@ function App() {
             charCount: content.length
           })
         } else {
-          // Fallback for text files
           if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
             const text = await file.text()
             newFiles.push({
@@ -162,7 +172,6 @@ function App() {
         setJobDescription(data.text)
         setJdSkills(data.skills || [])
       } else {
-        // Try reading as text directly
         const text = await file.text()
         if (!text.includes('%PDF')) {
           setJobDescription(text)
@@ -188,16 +197,15 @@ function App() {
     setCurrentStep(0)
     setPipelineExpanded(true)
 
-    // Simulate pipeline steps
     const stepDelay = async (step, delay) => {
       setCurrentStep(step)
       await new Promise(r => setTimeout(r, delay))
     }
 
-    await stepDelay(1, 400)  // Parsing
-    await stepDelay(2, 500)  // BERT
-    await stepDelay(3, 300)  // Similarity
-    await stepDelay(4, 400)  // Skills
+    await stepDelay(1, 400)
+    await stepDelay(2, 500)
+    await stepDelay(3, 300)
+    await stepDelay(4, 400)
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/manual-match`, {
@@ -214,7 +222,7 @@ function App() {
         })
       })
 
-      await stepDelay(5, 200)  // Ranking
+      await stepDelay(5, 200)
 
       const data = await response.json()
       setResults(data)
@@ -244,11 +252,14 @@ function App() {
               className={`btn-secondary ${showHowItWorks ? 'active' : ''}`}
               onClick={() => setShowHowItWorks(!showHowItWorks)}
             >
-              <Settings size={18} />
+              <Settings size={16} />
               How It Works
             </button>
+            <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <div className={`status-badge ${backendConnected ? 'connected' : 'disconnected'}`}>
-              {backendConnected ? <Check size={14} /> : <AlertCircle size={14} />}
+              {backendConnected ? <Check size={13} /> : <AlertCircle size={13} />}
               {backendConnected ? 'Connected' : 'Connecting...'}
             </div>
           </div>
@@ -268,12 +279,12 @@ function App() {
               <div className="info-card">
                 <div className="info-icon">🧠</div>
                 <h3>BERT Embeddings</h3>
-                <p>Converts text into 384-dimensional vectors that capture semantic meaning. "React developer" matches "Frontend engineer" even with different words.</p>
+                <p>Converts text into 384-dimensional vectors that capture semantic meaning. "React developer" matches "Frontend engineer".</p>
               </div>
               <div className="info-card">
                 <div className="info-icon">🔍</div>
                 <h3>Skill Extraction</h3>
-                <p>Identifies 200+ technical skills using pattern matching and synonyms. "js" → "javascript", "k8s" → "kubernetes".</p>
+                <p>Identifies 400+ technical skills using pattern matching and synonyms. "js" → "javascript", "k8s" → "kubernetes".</p>
               </div>
               <div className="info-card">
                 <div className="info-icon">📊</div>
@@ -298,32 +309,25 @@ function App() {
             {/* Job Description Card */}
             <div className="card">
               <div className="card-header">
-                <h3><FileText size={18} /> Job Description</h3>
+                <h3><FileText size={17} /> Job Description</h3>
                 <div className="card-actions">
                   <input type="file" id="jd-upload" accept=".pdf,.txt" onChange={handleJDUpload} hidden />
                   <label htmlFor="jd-upload" className="btn-icon" title="Upload file">
-                    <Upload size={16} />
+                    <Upload size={15} />
                   </label>
                   <button className="btn-icon" onClick={() => setJobDescription('')} title="Clear">
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
               <textarea
                 className="textarea"
-                placeholder="Paste job description here...
-
-Example:
-We're looking for a Senior Software Engineer with 5+ years of experience in React, Node.js, and AWS. Strong problem-solving skills required."
+                placeholder={"Paste job description here...\n\nExample:\nWe're looking for a Senior Software Engineer with 5+ years of experience in React, Node.js, and AWS. Strong problem-solving skills required."}
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
               />
               {jdSkills.length > 0 && (
-                <motion.div
-                  className="skills-preview"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <motion.div className="skills-preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <span className="skills-label">{jdSkills.length} skills detected:</span>
                   <div className="skill-pills">
                     {jdSkills.map((skill, i) => (
@@ -337,7 +341,7 @@ We're looking for a Senior Software Engineer with 5+ years of experience in Reac
             {/* Resume Upload Card */}
             <div className="card">
               <div className="card-header">
-                <h3><FileText size={18} /> Resumes</h3>
+                <h3><FileText size={17} /> Resumes</h3>
                 <button
                   className="btn-danger-sm"
                   onClick={() => setUploadedFiles([])}
@@ -370,12 +374,12 @@ We're looking for a Senior Software Engineer with 5+ years of experience in Reac
                   {uploadedFiles.map((file, i) => (
                     <motion.div
                       key={i}
-                      className={`file-item-wrapper`}
+                      className="file-item-wrapper"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                     >
                       <div className={`file-item ${file.error ? 'error' : ''}`}>
-                        <FileText size={16} className="file-icon" />
+                        <FileText size={15} className="file-icon" />
                         <span className="file-name">{file.name}</span>
                         <span className="file-chars">{file.charCount} chars</span>
                         <button
@@ -407,7 +411,7 @@ We're looking for a Senior Software Engineer with 5+ years of experience in Reac
                           >
                             <div className="extracted-text-header">
                               <span>📄 Extracted Text Preview</span>
-                              <span className="extracted-skills">
+                              <span className="extracted-skills-badge">
                                 {file.skills?.length > 0 && `${file.skills.length} skills detected`}
                               </span>
                             </div>
@@ -435,17 +439,17 @@ We're looking for a Senior Software Engineer with 5+ years of experience in Reac
             className="btn-primary"
             onClick={runMatching}
             disabled={loading || !jobDescription.trim() || uploadedFiles.length === 0}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
             {loading ? (
               <>
-                <RefreshCw className="spin" size={20} />
+                <RefreshCw className="spin" size={19} />
                 Analyzing...
               </>
             ) : (
               <>
-                <Sparkles size={20} />
+                <Sparkles size={19} />
                 Match Resumes
               </>
             )}
@@ -491,7 +495,7 @@ We're looking for a Senior Software Engineer with 5+ years of experience in Reac
 
       {/* Footer */}
       <footer className="footer">
-        <p>Resume Matcher v2.0 • Powered by Sentence-BERT • {healthData?.version || 'IR Project 2026'}</p>
+        <p>Resume Matcher v2.0 • Powered by Sentence-BERT + Groq LLM • {healthData?.version || 'IR Project 2026'}</p>
       </footer>
     </div>
   )

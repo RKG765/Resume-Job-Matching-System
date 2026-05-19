@@ -14,9 +14,17 @@ ENV/
 *.swp
 *.swo
 
-# Environment files
+# Environment files — NEVER commit API keys!
 .env
+.env.*
+!.env.example
+backend/.env
 *.env.local
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 
 # Data files (keep structure)
 data/raw/*
@@ -26,6 +34,9 @@ data/uploads/*
 !data/processed/.gitkeep
 !data/uploads/.gitkeep
 !data/sample/
+
+# Test output
+**/test_*_results.json
 
 # Electron
 frontend/node_modules/

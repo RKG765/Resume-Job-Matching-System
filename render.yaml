@@ -1,0 +1,22 @@
+# Render.com deployment config for Backend
+# See: https://render.com/docs/yaml-spec
+
+services:
+  - type: web
+    name: resume-job-matcher-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: USE_SQLITE
+        value: "true"
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: LLM_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: LLM_ENABLED
+        value: "true"
+    healthCheckPath: /api/health
+    plan: free

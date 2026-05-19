@@ -32,26 +32,26 @@ function RadialGauge({ score, size = 180 }) {
     const strokeDashoffset = circumference - (animatedScore / 100) * circumference
 
     const getColor = (s) => {
-        if (s >= 70) return { stroke: '#10b981', bg: '#d1fae5', text: '#059669' }
-        if (s >= 40) return { stroke: '#f59e0b', bg: '#fef3c7', text: '#d97706' }
-        return { stroke: '#ef4444', bg: '#fee2e2', text: '#dc2626' }
+        if (s >= 70) return { stroke: '#10b981', bg: 'var(--green-subtle)', text: 'var(--green)' }
+        if (s >= 40) return { stroke: '#f59e0b', bg: 'var(--amber-subtle)', text: 'var(--amber)' }
+        return { stroke: '#ef4444', bg: 'var(--red-subtle)', text: 'var(--red)' }
     }
 
     const colors = getColor(animatedScore)
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const trackColor = isDark ? '#1e2435' : '#e2e8f0'
 
     return (
         <div className="gauge-container" style={{ width: size, height: size }}>
             <svg width={size} height={size} className="gauge-svg">
-                {/* Background circle */}
                 <circle
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
                     fill="none"
-                    stroke="#e2e8f0"
+                    stroke={trackColor}
                     strokeWidth="12"
                 />
-                {/* Progress circle */}
                 <motion.circle
                     cx={size / 2}
                     cy={size / 2}

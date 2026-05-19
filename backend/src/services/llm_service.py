@@ -1,11 +1,9 @@
 """
-LLM Service using LM Studio (local) or any OpenAI-compatible API
+LLM Service using Groq Cloud API or any OpenAI-compatible API.
 Enhanced with email generation, recommendations, and intelligent actions.
 """
 
-import json
-import urllib.request
-import urllib.error
+import httpx
 from typing import List, Optional
 import logging
 
@@ -38,17 +36,24 @@ class LLMService:
             self.api_url = f"{settings.LLM_API_URL}/chat/completions"
             self.models_url = f"{settings.LLM_API_URL}/models"
             self.model = settings.LLM_MODEL
+            self.api_key = settings.LLM_API_KEY
             self.enabled = settings.LLM_ENABLED
             self._initialized = True
+    
+    def _headers(self) -> dict:
+        """Build request headers with optional Bearer auth."""
+        h = {"Content-Type": "application/json"}
+        if self.api_key:
+            h["Authorization"] = f"Bearer {self.api_key}"
+        return h
     
     def is_available(self) -> bool:
         """Check if LLM service is reachable."""
         if not self.enabled:
             return False
         try:
-            req = urllib.request.Request(self.models_url, method="GET")
-            with urllib.request.urlopen(req, timeout=3) as res:
-                return res.status == 200
+            res = httpx.get(self.models_url, headers=self._headers(), timeout=5)
+            return res.status_code == 200
         except Exception:
             return False
     
@@ -65,16 +70,16 @@ class LLMService:
             "stream": False,
         }
         
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self.api_url, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-        
         try:
-            with urllib.request.urlopen(req, timeout=90) as res:
-                body = json.loads(res.read().decode("utf-8"))
-                return body["choices"][0]["message"]["content"].strip()
-        except urllib.error.HTTPError as e:
-            error_msg = f"LLM HTTP error: {e.read().decode()}"
+            res = httpx.post(
+                self.api_url, json=payload,
+                headers=self._headers(), timeout=90
+            )
+            res.raise_for_status()
+            body = res.json()
+            return body["choices"][0]["message"]["content"].strip()
+        except httpx.HTTPStatusError as e:
+            error_msg = f"LLM HTTP error {e.response.status_code}: {e.response.text}"
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         except Exception as e:
@@ -287,7 +292,7 @@ def get_llm_service() -> LLMService:
     return _llm_service
 
 
-def configure_llm(api_url: str = None, model: str = None, enabled: bool = None):
+def configure_llm(api_url: str = None, model: str = None, enabled: bool = None, api_key: str = None):
     """Configure the LLM service."""
     llm = get_llm_service()
     if api_url:
@@ -295,6 +300,8 @@ def configure_llm(api_url: str = None, model: str = None, enabled: bool = None):
         llm.models_url = f"{api_url.rstrip('/')}/models"
     if model:
         llm.model = model
+    if api_key:
+        llm.api_key = api_key
     if enabled is not None:
         llm.enabled = enabled
     return llm

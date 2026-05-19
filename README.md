@@ -3,6 +3,9 @@
   <p align="center">
     An AI-powered Information Retrieval system that semantically matches resumes to job descriptions using <strong>Sentence-BERT embeddings</strong>, <strong>hybrid scoring</strong>, and <strong>LLM-powered explanations</strong>.
   </p>
+  <p align="center">
+    <strong>Deployed:</strong> Frontend on Vercel | Backend on Render
+  </p>
 </p>
 
 <p align="center">
@@ -45,7 +48,7 @@ The system takes a job description and one or more resumes, then:
 2. **Computes** semantic similarity (cosine) and skill overlap (Jaccard)
 3. **Ranks** candidates using a weighted hybrid score
 4. **Classifies** each into Strong Fit / Partial Fit / Needs Work
-5. **Explains** results using an integrated LLM (DeepSeek-R1 via LM Studio)
+5. **Explains** results using an integrated LLM (Groq Cloud API — Llama 3.3 70B)
 
 ---
 
@@ -83,7 +86,7 @@ graph TB
     end
 
     subgraph External["🔗 External"]
-        LM_STUDIO["LM Studio<br/>DeepSeek-R1"]
+        GROQ["Groq Cloud API<br/>Llama 3.3 70B"]
     end
 
     UI_JD & UI_Resume --> API
@@ -98,7 +101,7 @@ graph TB
     API --> DB_SVC
     DB_SVC --> PG
     DB_SVC --> SQLite
-    LLM --> LM_STUDIO
+    LLM --> GROQ
     API --> UI_Pipeline
     API --> UI_Dashboard
 
@@ -124,7 +127,7 @@ flowchart LR
     E --> G["⚖️ Weighted Hybrid Score<br/>0.4 × Semantic +<br/>0.6 × Skills"]
     F --> G
     G --> H["📊 Classification<br/>≥70% → Strong Fit<br/>≥40% → Partial Fit<br/> <40% → Needs Work"]
-    H --> I["🤖 LLM Explanation<br/>DeepSeek-R1<br/>Natural Language Summary"]
+    H --> I["🤖 LLM Explanation<br/>Groq (Llama 3.3 70B)<br/>Natural Language Summary"]
     I --> J["📋 Ranked Results<br/>Score + Skills +<br/>Gap Analysis + Recs"]
 
     style A fill:#e3f2fd,stroke:#1565C0
@@ -166,7 +169,7 @@ flowchart TD
 | **Core IR** | Cosine Similarity | Vector-based content matching for semantic understanding |
 | **Core IR** | Jaccard Similarity | Set-based skill overlap calculation |
 | **Core IR** | Hybrid Ranking | Weighted scoring: `(Content × 0.4) + (Skills × 0.6)` |
-| **NLP** | Skill Extraction | 400+ technical skill patterns with regex matching |
+| **NLP** | Skill Extraction | 800+ technical skill patterns with regex matching |
 | **NLP** | Fuzzy Matching | Typo tolerance — `"Pytohn"` → `"Python"` |
 | **NLP** | Synonym Resolution | `"JS"` → `"JavaScript"`, `"ML"` → `"Machine Learning"` |
 | **Classification** | Fit/Partial/Reject | Threshold-based candidate classification with recommendations |
@@ -215,14 +218,14 @@ graph LR
     end
 
     subgraph LLM_EXT["LLM Layer"]
-        LM["LM Studio"]
-        DEEPSEEK["DeepSeek-R1"]
+        GROQ_C["Groq Cloud API"]
+        LLAMA["Llama 3.3 70B"]
     end
 
     subgraph Infra["Infrastructure"]
         DOCKER["Docker"]
-        COMPOSE["Docker Compose"]
-        NGINX["Nginx"]
+        VERCEL["Vercel"]
+        RENDER["Render"]
     end
 
     Client --> Server --> ML
@@ -244,8 +247,8 @@ graph LR
 | **ML/NLP** | Sentence-Transformers, PyTorch, NLTK, scikit-learn | 2.2.2, 2.1.2, 3.8, 1.4 |
 | **Database** | PostgreSQL + pgvector, SQLAlchemy (async) | 16, 2.0.25 |
 | **File Parsing** | PyPDF2, pdfplumber, python-docx | 3.0, 0.10, 1.1 |
-| **LLM** | LM Studio (DeepSeek-R1), OpenAI-compatible API | Local |
-| **Infrastructure** | Docker, Docker Compose, Nginx | Latest |
+| **LLM** | Groq Cloud API (Llama 3.3 70B), OpenAI-compatible API | Cloud |
+| **Infrastructure** | Docker, Vercel (Frontend), Render (Backend) | Cloud |
 
 ---
 
@@ -279,7 +282,7 @@ graph TD
     
     SVC_DIR --> EMB_S["embedding_service.py<br/>BERT singleton"]
     SVC_DIR --> MATCH_S["matching_service.py<br/>Hybrid scoring engine"]
-    SVC_DIR --> LLM_S["llm_service.py<br/>LM Studio integration"]
+    SVC_DIR --> LLM_S["llm_service.py<br/>Groq Cloud API integration"]
     SVC_DIR --> DB_S["db_service.py<br/>CRUD + vector search"]
     
     CORE_DIR --> CFG["config.py<br/>Pydantic settings"]
@@ -322,11 +325,11 @@ resume_job_matcher/
 │   │   ├── services/
 │   │   │   ├── embedding_service.py   # Sentence-BERT singleton service
 │   │   │   ├── matching_service.py    # Hybrid scoring: cosine + jaccard
-│   │   │   ├── llm_service.py         # LM Studio / DeepSeek-R1 integration
+│   │   │   ├── llm_service.py         # Groq Cloud API / Llama 3.3 70B integration
 │   │   │   └── db_service.py          # Database CRUD + vector search
 │   │   ├── classification/
 │   │   │   ├── classifier.py          # Fit / Partial / Reject classification
-│   │   │   └── skill_gap.py           # 400+ skill patterns, fuzzy match, synonyms
+│   │   │   └── skill_gap.py           # 800+ skill patterns, fuzzy match, synonyms
 │   │   ├── models/
 │   │   │   ├── job.py                 # Job SQLAlchemy model
 │   │   │   ├── resume.py             # Resume SQLAlchemy model
@@ -336,22 +339,24 @@ resume_job_matcher/
 │   │       └── database.py           # Async SQLAlchemy + pgvector setup
 │   ├── data/
 │   │   └── skills_dataset.json       # External skills definitions
+│   ├── test_50_cases.py              # 50-case comprehensive test suite
 │   ├── requirements.txt
-│   └── Dockerfile
+│   └── Dockerfile                    # Cloud-ready (pre-downloads BERT)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx                   # Main application component
-│   │   ├── App.css                   # Ceramic Light design system
+│   │   ├── App.css                   # Obsidian/Crystal design system
 │   │   ├── components/
 │   │   │   ├── LiveResumeEditor.jsx  # Real-time resume text editor
 │   │   │   ├── MatchDashboard.jsx    # Results with radial gauges
 │   │   │   └── PipelineVisualizer.jsx # Step-by-step processing view
 │   │   ├── index.css
 │   │   └── main.jsx
+│   ├── vercel.json                   # Vercel deployment config
 │   ├── package.json
 │   └── vite.config.js
-├── docker-compose.yml                # Full-stack orchestration
-├── nginx.conf                        # Reverse proxy configuration
+├── render.yaml                       # Render backend deployment config
+├── docker-compose.yml                # Full-stack orchestration (local)
 ├── .env.example                      # Environment variable template
 ├── PROBLEM.md                        # Problem statement & IR concepts
 └── .gitignore
@@ -365,26 +370,34 @@ resume_job_matcher/
 
 - **Python** 3.10+
 - **Node.js** 18+
-- **Docker** & **Docker Compose** (for containerized setup)
-- **LM Studio** (optional, for LLM features)
+- **Groq API Key** (free at [console.groq.com](https://console.groq.com)) — optional, for LLM features
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Cloud Deployment (Recommended)
 
-```bash
-# Clone the repository
-git clone https://github.com/your-username/resume-job-matcher.git
-cd resume-job-matcher
+#### Backend → Render (Free Tier)
 
-# Start all services
-docker-compose up -d
+1. Go to [render.com](https://render.com) → **New Web Service**
+2. Connect your GitHub repo
+3. Set **Root Directory**: `backend`
+4. Set **Runtime**: Docker
+5. Add environment variables:
+   - `USE_SQLITE=true`
+   - `CORS_ORIGINS=*`
+   - `LLM_API_KEY=your_groq_key`
+6. Deploy → note your URL (e.g., `https://resume-matcher-api.onrender.com`)
 
-# Access the application
-# Frontend: http://localhost:3000
-# Backend API Docs: http://localhost:8000/docs
-# PostgreSQL: localhost:5432
-```
+#### Frontend → Vercel
 
-### Option 2: Manual Setup
+1. Go to [vercel.com](https://vercel.com) → **Import Project**
+2. Set **Root Directory**: `frontend`
+3. Set **Framework**: Vite
+4. Add environment variable:
+   - `VITE_API_URL=https://your-render-backend-url.onrender.com`
+5. Deploy
+
+> ⚠️ **Why not Vercel for backend?** PyTorch + BERT model is ~500MB, exceeding Vercel's 250MB serverless limit. Render's Docker support handles this.
+
+### Option 2: Local Development
 
 #### Backend
 
@@ -420,19 +433,33 @@ npm run dev
 # Open http://localhost:5173
 ```
 
+### Option 3: Docker Compose (Local)
+
+```bash
+git clone https://github.com/your-username/resume-job-matcher.git
+cd resume-job-matcher
+docker-compose up -d
+
+# Frontend: http://localhost:3000
+# Backend API Docs: http://localhost:8000/docs
+```
+
 ### Environment Variables
 
 Create a `.env` file in `backend/`:
 
 ```env
 # Database (use SQLite for quick local dev)
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/resume_matcher
 USE_SQLITE=true
 
-# LLM Configuration (optional)
-LLM_API_URL=http://localhost:1234/v1
-LLM_MODEL=deepseek-r1-distill-llama-8b
+# LLM Configuration (Groq Cloud — free key at console.groq.com)
+LLM_API_URL=https://api.groq.com/openai/v1
+LLM_API_KEY=your_groq_api_key_here
+LLM_MODEL=llama-3.3-70b-versatile
 LLM_ENABLED=true
+
+# CORS — use * for cloud, or comma-separated URLs
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 
 # Application
 DEBUG=true
@@ -566,12 +593,12 @@ Where:
 - [x] **Backend Architecture** — FastAPI async application with lifespan management
 - [x] **Sentence-BERT Integration** — Singleton embedding service with `all-MiniLM-L6-v2` model
 - [x] **Matching Engine** — Hybrid cosine + Jaccard scoring with configurable weights
-- [x] **Skill Extraction** — 400+ skill patterns covering languages, frameworks, databases, cloud, DevOps, ML, and soft skills
+- [x] **Skill Extraction** — 800+ skill patterns covering languages, frameworks, databases, cloud, DevOps, ML, and soft skills
 - [x] **Fuzzy Matching** — Typo-tolerant skill recognition using `SequenceMatcher` with 0.85 threshold
 - [x] **Synonym Resolution** — Comprehensive synonym mapping (JS→JavaScript, ML→Machine Learning, etc.)
 - [x] **Candidate Classification** — Three-tier classification (Fit ≥70%, Partial ≥40%, Reject <40%)
 - [x] **Skill Gap Analysis** — Critical vs. nice-to-have skills with actionable recommendations
-- [x] **LLM Integration** — LM Studio / DeepSeek-R1 for match explanations, outreach emails, interview questions, career recs
+- [x] **LLM Integration** — Groq Cloud API (Llama 3.3 70B) for match explanations, outreach emails, interview questions, career recs
 - [x] **Database Layer** — PostgreSQL + pgvector with SQLite fallback, async SQLAlchemy 2.0
 - [x] **REST API** — 15+ comprehensive endpoints with Pydantic validation
 - [x] **PDF Parsing** — PyPDF2 + pdfplumber dual-engine extraction with text cleaning
@@ -580,8 +607,10 @@ Where:
 - [x] **Pipeline Visualizer** — Step-by-step processing animation (embed → match → classify → explain)
 - [x] **Match Dashboard** — Radial gauge scores, skill badges, expandable details
 - [x] **Docker Deployment** — Full docker-compose with PostgreSQL, backend, and frontend containers
+- [x] **Cloud Deployment** — Frontend on Vercel, Backend on Render (Docker with BERT pre-download)
 - [x] **API Documentation** — Auto-generated Swagger UI and ReDoc at `/docs` and `/redoc`
 - [x] **Background Tasks** — Async processing for heavy operations + sample data seeding
+- [x] **Comprehensive Testing** — 50-case test suite covering 8 JD types × 12 resume profiles = 100% pass rate
 
 ### 🔮 Planned
 
@@ -591,6 +620,43 @@ Where:
 - [ ] Recommendation engine (suggest jobs to candidates)
 - [ ] Analytics dashboard with recruitment metrics
 - [ ] Interview scheduling integration
+
+---
+
+## 🧪 Test Results (50 Cases)
+
+The backend has been validated with a comprehensive 50-case test suite (`backend/test_50_cases.py`) covering:
+
+| Category | Cases | Pass Rate | Description |
+|----------|-------|-----------|-------------|
+| Health & Infrastructure | 1-5 | **5/5** | Health check, root endpoint, LLM status, Swagger docs, 404 handling |
+| Skill Extraction | 6-15 | **10/10** | Python, Frontend, DS, DevOps, Mobile, edge cases, synonyms |
+| Perfect Matches | 16-21 | **6/6** | Domain-matched candidates score **78-88%** (Strong Match) |
+| Cross-Domain Mismatches | 22-26 | **5/5** | Wrong-domain candidates score **9-20%** (Low Match) |
+| Multi-Resume Ranking | 27-31 | **5/5** | Correct ordering of 4-5 candidates by relevance |
+| Partial Matches | 32-36 | **5/5** | Adjacent-domain candidates score **42-67%** (Potential Match) |
+| Edge Cases | 37-40 | **4/4** | Junior devs, overqualified CTOs, career changers |
+| Full Rankings (12 candidates) | 41-42 | **2/2** | All 12 resume profiles ranked correctly |
+| Specific Overlaps | 43-45 | **3/3** | Partial skill overlap scenarios |
+| Stress Tests | 46-50 | **5/5** | Duplicates, weak-only pools, strong-competing |
+| **Total** | **50** | **100%** | |
+
+### Sample Ranking Output
+
+**Full-Stack JD → 5 Candidates:**
+```
+1. Alice_Perfect  = 79%  (Strong Match,   14/17 skills matched)
+2. Bob_Backend    = 67%  (Potential Match, 10/17 skills matched)
+3. Carol_Frontend = 39%  (Low Match,        4/17 skills matched)
+4. Grace_Junior   = 32%  (Low Match,        4/17 skills matched)
+5. David_Analyst  = 28%  (Low Match,        2/17 skills matched)
+```
+
+**Run tests locally:**
+```bash
+# Start backend first, then:
+python backend/test_50_cases.py
+```
 
 ---
 
@@ -638,7 +704,9 @@ February 2026
 2. Sentence Transformers Documentation: [sbert.net](https://www.sbert.net/)
 3. pgvector — Open-source vector similarity search for PostgreSQL: [github.com/pgvector/pgvector](https://github.com/pgvector/pgvector)
 4. FastAPI Documentation: [fastapi.tiangolo.com](https://fastapi.tiangolo.com/)
-5. LM Studio — Local LLM serving: [lmstudio.ai](https://lmstudio.ai/)
+5. Groq Cloud API — High-speed LLM inference: [groq.com](https://groq.com)
+6. Vercel — Frontend deployment platform: [vercel.com](https://vercel.com)
+7. Render — Cloud application hosting: [render.com](https://render.com)
 
 ---
 

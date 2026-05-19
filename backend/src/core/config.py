@@ -4,7 +4,7 @@ Uses pydantic-settings for environment variable management.
 """
 
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 import os
 
 
@@ -31,17 +31,26 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384
     
-    # LLM Settings
-    LLM_API_URL: str = "http://127.0.0.1:1234/v1"
-    LLM_MODEL: str = "deepseek-r1-distill-llama-8b"
+    # LLM Settings (Groq Cloud API)
+    LLM_API_URL: str = "https://api.groq.com/openai/v1"
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = "llama-3.3-70b-versatile"
     LLM_ENABLED: bool = True
     
     # File Upload
     MAX_UPLOAD_SIZE: int = 16 * 1024 * 1024  # 16MB
     UPLOAD_DIR: str = "data/uploads"
     
-    # CORS
-    CORS_ORIGINS: list = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]
+    # CORS - comma-separated string from env, or default list for local dev
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
+    
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS origins from comma-separated string or allow all with *."""
+        origins = self.CORS_ORIGINS.strip()
+        if origins == "*":
+            return ["*"]
+        return [o.strip() for o in origins.split(",") if o.strip()]
     
     @property
     def database_url(self) -> str:

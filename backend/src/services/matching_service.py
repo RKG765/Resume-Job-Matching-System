@@ -46,10 +46,10 @@ class MatchingService:
         Returns:
             Match result with scores and skill analysis
         """
-        # Extract skills if not provided
-        if job_skills is None:
+        # Extract skills if not provided (or empty list)
+        if not job_skills:
             job_skills = list(self.skill_analyzer.extract_skills(job_description))
-        if resume_skills is None:
+        if not resume_skills:
             resume_skills = list(self.skill_analyzer.extract_skills(resume_content))
         
         # Compute BERT semantic similarity
@@ -116,7 +116,7 @@ class MatchingService:
             Sorted list of match results (highest score first)
         """
         # Extract job skills once
-        if job_skills is None:
+        if not job_skills:
             job_skills = list(self.skill_analyzer.extract_skills(job_description))
         
         results = []
